@@ -42,8 +42,8 @@ void usage() {
 }
 
 int print_device_list() {
-  fprintf(stderr, "Not implemented\n");
-  return -1;
+  get_list_of_available_devices();
+  return 0;
 }
 
 static struct option long_options[] = {

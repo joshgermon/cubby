@@ -1,13 +1,11 @@
+#include "../include/backup.h"
 #include "systemd/sd-device.h"
-#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mount.h>
 
 #define SUBSYSTEM "block"
 #define DEVICE_TYPE "partition"
-// #define DEVICE_TYPE "disk"
 
 typedef struct {
   char *id_name;
@@ -16,56 +14,6 @@ typedef struct {
   char *block_size_part_table_type;
   char *syspath;
 } device_attrs;
-
-// TODO: Remove
-int print_dir_contents() {
-  // Directory path
-  const char *path = "/mnt";
-
-  // Open the directory
-  DIR *directory = opendir(path);
-
-  // Check if the directory is opened successfully
-  if (directory != NULL) {
-    // Read directory entries
-    struct dirent *entry;
-    while ((entry = readdir(directory)) != NULL) {
-      // Print file names
-      printf("%s\n", entry->d_name);
-    }
-
-    // Close the directory
-    closedir(directory);
-  } else {
-    // Handle error if directory cannot be opened
-    perror("Error opening directory");
-    return 1;
-  }
-
-  return 0;
-}
-
-int mount_device_to_fs(const char *source) {
-  // TODO: Make this random uid
-  const char *mount_path = "/mnt";
-
-  if (mount("/dev/sdc1", mount_path, "exfat", 0, "") == 0) {
-    printf("Mount successful!\n");
-  } else {
-    perror("Mount failed");
-  }
-
-  print_dir_contents();
-
-  if (umount(mount_path) == 0) {
-    printf("Unmount successful!\n");
-  } else {
-    perror("Unmount failed");
-    exit(EXIT_FAILURE);
-  }
-
-  return 0;
-}
 
 static device_attrs get_sdcard_attributes(sd_device *dev) {
   device_attrs dev_attrs = {"noname", "noserial", "nosize",
@@ -218,5 +166,30 @@ int setup_udev_monitoring() {
   if (r < 0)
     fail("Could not start event loop");
 
+  return 0;
+}
+
+int get_list_of_available_devices() {
+  sd_device_enumerator *sd_dev_enum;
+  sd_device_enumerator_new(&sd_dev_enum);
+
+  sd_device *current_device;
+  sd_device_enumerator_add_match_subsystem(sd_dev_enum, "block", 1);
+
+  for (current_device = sd_device_enumerator_get_device_first(sd_dev_enum);
+       current_device != NULL;
+       current_device = sd_device_enumerator_get_device_next(sd_dev_enum)) {
+    const char *id_model = NULL;
+    int r = sd_device_get_property_value(current_device, "ID_MODEL", &id_model);
+    if (r >= 0) {
+      printf("%s\n", id_model);
+      device_attrs dev_attrs = get_sdcard_attributes(current_device);
+      printf("%s:%s:%s", dev_attrs.id_name, dev_attrs.uuid,
+             dev_attrs.syspath);
+    }
+    sd_device_unref(current_device);
+  }
+
+  sd_device_enumerator_unref(sd_dev_enum);
   return 0;
 }
