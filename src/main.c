@@ -42,7 +42,8 @@ void usage() {
 }
 
 int print_device_list() {
-  get_list_of_available_devices();
+  char *largest_part_devname[9];
+  get_largest_partition("/dev/sdc", &largest_part_devname);
   return 0;
 }
 

@@ -31,10 +31,18 @@ int print_dir_contents() {
   return 0;
 }
 
+int backup_directory_contents(char* source_dir, char* target_dir) {
+  char *rsync_backup_cmd;
+  sprintf(rsync_backup_cmd, "rsync -r %s %s", source_dir, target_dir);
+  system(rsync_backup_cmd);
+  return 0;
+}
+
 int mount_device_to_fs(const char *source) {
   // TODO: Make this random uid
   const char *mount_path = "/mnt";
 
+  // TODO: Replace with source, found with partitions
   if (mount("/dev/sdc1", mount_path, "exfat", 0, "") == 0) {
     printf("Mount successful!\n");
   } else {
