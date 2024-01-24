@@ -5,6 +5,25 @@ A small CLI utility that listens for a specific USB event (mounting/insert) and 
 
 The ultimate goal of this application is to automatically backup files from an SD Card once inserted into a USB SD Card Reader.
 
+## Todo List
+- [x] Successfully listens for device events
+- [x] Mounts partition of device to filesystem
+- [x] Accepts flags / options
+- [x] Backs up trusted device to provided backup path with Rsync
+- [x] Provide way to list devices
+- [ ] Provide way to add trusted device from listed devices
+- [ ] Make a new directory with timestamp to backup too i.e ./backup/2023-01-01_1
+- [ ] Improved validation of flags and commands i.e X flag only valid for Y command
+- [ ] Investigate behaviour when multiple partitions are added in an event (possible duplicate runs)
+- [ ] Report on new events / status / progress to some network
+- [ ] Backup specific folder on device if it exists (DCIM/)
+- [ ] Config file / config pass along includes to rsync i.e. *.ARW
+- [ ] Run as a service investigation
+- [ ] Permission requirements and error handling when perms aren't there
+- [ ] General logging
+- [ ] General error handling
+- [ ] Prettify the CLI interactions
+
 ## Ideas
 - CLI interface to interact with
 - CLI interface to start a server
@@ -21,6 +40,7 @@ The ultimate goal of this application is to automatically backup files from an S
 
 Example Server CLI command:
 `cubby --mode server --usb <identifier> --backup-dir ./backup`
+`cubby start --usb <identifier> --backup-dir ./backup`
 
 Interactively pick USB device
 ```
