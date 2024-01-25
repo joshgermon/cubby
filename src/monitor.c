@@ -1,63 +1,9 @@
+#include "../include/cubby.h"
 #include "../include/backup.h"
 #include "systemd/sd-device.h"
-#include <blkid/blkid.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define SUBSYSTEM "block"
-#define DEVICE_TYPE "partition"
-
-typedef struct {
-  char *id_name;
-  char *uuid;
-  char *size;
-  char *block_size_part_table_type;
-  char *syspath;
-} device_attrs;
-
-const char* get_largest_partition(const char *devpath) {
-  static char largest_part_devname[16];
-  blkid_probe probe = blkid_new_probe_from_filename(devpath);
-  if (!probe) {
-    fprintf(stderr, "Error creating probe: %s\n", strerror(errno));
-    return NULL;
-  }
-
-  // Get number of partitions
-  blkid_partlist part_list;
-  int part_count, i;
-
-  part_list = blkid_probe_get_partitions(probe);
-  part_count = blkid_partlist_numof_partitions(part_list);
-
-  if (part_count <= 0) {
-    printf("Could not find any partitions for given device.\n");
-    return NULL;
-  }
-
-  blkid_partition largest_partition = NULL;
-  unsigned long long max_size = 0;
-
-  // Loop over partitions to find the largest size
-  for (i = 0; i < part_count; i++) {
-    blkid_partition part = blkid_partlist_get_partition(part_list, i);
-    unsigned long long size = blkid_partition_get_size(part);
-
-    printf("Part %s%d is %llu\n", devpath, blkid_partition_get_partno(part), size);
-
-    if (size > max_size) {
-      max_size = size;
-      largest_partition = part;
-    }
-  }
-
-  snprintf(largest_part_devname, sizeof(largest_part_devname), "%s%d", devpath, blkid_partition_get_partno(largest_partition));
-  printf("Largest part is %s\n", largest_part_devname);
-
-  blkid_free_probe(probe);
-  return largest_part_devname;
-}
 
 static device_attrs get_sdcard_attributes(sd_device *dev) {
   device_attrs dev_attrs = {"noname", "noserial", "nosize",
@@ -154,8 +100,9 @@ void fail(const char *message) {
 
 int device_event_handler(sd_device_monitor *monitor, sd_device *device,
                          void *userdata) {
+  // Retrieve cubby options from userdata
+  cubby_opts_t *opts = (cubby_opts_t*)userdata;
 
-  printf("BEGIN HANDLER\n");
   sd_device_action_t action;
   sd_device_get_action(device, &action);
 
@@ -167,8 +114,6 @@ int device_event_handler(sd_device_monitor *monitor, sd_device *device,
   device_uid = (char *)malloc(device_uid_length);
 
   get_device_uid(dev_attrs, device_uid);
-  printf("Device UID: %s\n", device_uid);
-  printf("Device Size: %s\n", dev_attrs.size);
 
   int device_size = atoi(dev_attrs.size);
   if (device_size == 0) {
@@ -177,23 +122,24 @@ int device_event_handler(sd_device_monitor *monitor, sd_device *device,
   }
 
   if (uid_is_in_list(device_uid) == 0) {
-    printf("UID is in the LIST\n");
+    printf("Device connected is a *trusted device*.\n");
 
     const char *dev_name;
     sd_device_get_devname(device, &dev_name);
 
-    printf("DEV NAME = %s\n", dev_name);
-
-    // Find largest partition of drive
-    const char *part_dev_name = get_largest_partition(dev_name);
     // Mount partition to file system
-    mount_device_to_fs(part_dev_name);
+    const char* mount_path = mount_device_to_fs(dev_name);
+    // Backup
+    backup_dir(opts, mount_path);
+    // Unmount
+    unmount_device(mount_path);
   }
 
+  free(device_uid);
   return 0;
 }
 
-int setup_udev_monitoring() {
+int setup_udev_monitoring(cubby_opts_t *opts) {
   int r;
   sd_device_monitor *monitor = NULL;
   r = sd_device_monitor_new(&monitor);
@@ -205,7 +151,7 @@ int setup_udev_monitoring() {
   if (r < 0)
     fail("Could not add subsystem match to monitor");
 
-  r = sd_device_monitor_start(monitor, device_event_handler, NULL);
+  r = sd_device_monitor_start(monitor, device_event_handler, opts);
   if (r < 0)
     fail("Could not start monitor");
 
@@ -217,27 +163,4 @@ int setup_udev_monitoring() {
   return 0;
 }
 
-int get_list_of_available_devices() {
-  sd_device_enumerator *sd_dev_enum;
-  sd_device_enumerator_new(&sd_dev_enum);
-
-  sd_device *current_device;
-  sd_device_enumerator_add_match_subsystem(sd_dev_enum, "block", 1);
-
-  for (current_device = sd_device_enumerator_get_device_first(sd_dev_enum);
-       current_device != NULL;
-       current_device = sd_device_enumerator_get_device_next(sd_dev_enum)) {
-    const char *id_model = NULL;
-    int r = sd_device_get_property_value(current_device, "ID_MODEL", &id_model);
-    if (r >= 0) {
-      printf("%s\n", id_model);
-      device_attrs dev_attrs = get_sdcard_attributes(current_device);
-      printf("%s:%s:%s", dev_attrs.id_name, dev_attrs.uuid, dev_attrs.syspath);
-    }
-    sd_device_unref(current_device);
-  }
-
-  sd_device_enumerator_unref(sd_dev_enum);
-  return 0;
-}
 
