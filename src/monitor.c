@@ -1,11 +1,12 @@
 #include "../include/cubby.h"
+#include "../include/monitor.h"
 #include "../include/backup.h"
 #include "systemd/sd-device.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static device_attrs get_sdcard_attributes(sd_device *dev) {
+device_attrs get_sdcard_attributes(sd_device *dev) {
   device_attrs dev_attrs = {"noname", "noserial", "nosize",
                             "noblocksizenorparttabletype", "no-path"};
   int res;
