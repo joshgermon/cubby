@@ -8,7 +8,7 @@ typedef struct {
   char *id_name;
   char *uuid;
   char *size;
-  char *block_size_part_table_type;
+  char *block_size;
   char *syspath;
 } DeviceAttributes;
 

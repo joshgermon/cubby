@@ -8,7 +8,7 @@
 
 DeviceAttributes get_sdcard_attributes(sd_device *dev) {
   DeviceAttributes dev_attrs = {"noname", "noserial", "nosize",
-                            "noblocksizenorparttabletype", "no-path"};
+                            "noblocksize", "nopath"};
   int res;
   const char *syspath;
   res = sd_device_get_syspath(dev, &syspath);
@@ -40,14 +40,14 @@ DeviceAttributes get_sdcard_attributes(sd_device *dev) {
   if (res >= 0)
     dev_attrs.size = (char *)size;
 
-  const char *block_size_part_table_type;
+  const char *block_size;
   res = sd_device_get_property_value(dev, "ID_FS_BLOCKSIZE",
-                                     &block_size_part_table_type);
+                                     &block_size);
   if (res >= 0)
-    dev_attrs.block_size_part_table_type = (char *)block_size_part_table_type;
+    dev_attrs.block_size = (char *)block_size;
   else if (sd_device_get_property_value(
-               dev, "ID_PART_TABLE_TYPE:", &block_size_part_table_type) >= 0)
-    dev_attrs.block_size_part_table_type = (char *)block_size_part_table_type;
+               dev, "ID_PART_TABLE_TYPE:", &block_size) >= 0)
+    dev_attrs.block_size = (char *)block_size;
 
   return dev_attrs;
 }
@@ -81,11 +81,11 @@ static int uid_is_in_list(char *device_uid) {
 
 static void print_event_log(DeviceAttributes dev_attrs) {
   // Print all details of device
-  printf("\n-- Device Connected --\n");
+  printf("\n-- Trusted Device Event --\n");
   printf("\tName: %s\n", dev_attrs.id_name);
   printf("\tUUID: %s\n", dev_attrs.uuid);
   printf("\tSize: %s\n", dev_attrs.size);
-  printf("\tBlock Size: %s\n", dev_attrs.block_size_part_table_type);
+  printf("\tBlock Size: %s\n", dev_attrs.block_size);
   printf("\tSyspath: %s\n\n", dev_attrs.syspath);
 }
 
@@ -93,7 +93,7 @@ void get_device_uid(DeviceAttributes dev_attrs, char *device_uid, size_t device_
   // We don't want to add size, as size can change depending on the SD card
   // connected to the actual card reader
   snprintf(device_uid, device_uid_len, "%s:%s:%s", dev_attrs.id_name, dev_attrs.uuid,
-          dev_attrs.block_size_part_table_type);
+          dev_attrs.block_size);
 }
 
 void fail(const char *message) {
@@ -113,11 +113,18 @@ int device_event_handler(sd_device_monitor *monitor, sd_device *device,
   DeviceAttributes dev_attrs = get_sdcard_attributes(device);
   size_t device_uid_length = strlen(dev_attrs.id_name) +
                              strlen(dev_attrs.uuid) +
-                             strlen(dev_attrs.block_size_part_table_type) + 3;
+                             strlen(dev_attrs.block_size) + 3;
   device_uid = (char *)malloc(device_uid_length);
 
-  print_event_log(dev_attrs);
   get_device_uid(dev_attrs, device_uid, device_uid_length);
+
+  // Return if device is not a trusted device
+  if (strcmp(device_uid, opts->usb_device_id) != 0) {
+    printf("Ignoring event, device is not a *trusted device*.\n");
+    return 0;
+  }
+
+  print_event_log(dev_attrs);
 
   int device_size = atoi(dev_attrs.size);
   if (device_size == 0) {
@@ -125,21 +132,14 @@ int device_event_handler(sd_device_monitor *monitor, sd_device *device,
     return 0;
   }
 
-  // if (uid_is_in_list(device_uid) == 0) {
-  if (strcmp(device_uid, opts->usb_device_id) == 0) {
-    printf("Device connected is a *trusted device*.\n");
+  const char *dev_name;
+  sd_device_get_devname(device, &dev_name);
 
-    const char *dev_name;
-    sd_device_get_devname(device, &dev_name);
+  // Mount partition to file system and backup
+  const char* mount_path = mount_device_to_fs(dev_name);
+  backup_dir(opts, mount_path);
 
-    // Mount partition to file system
-    const char* mount_path = mount_device_to_fs(dev_name);
-    // Backup
-    backup_dir(opts, mount_path);
-    // Unmount
-    unmount_device(mount_path);
-  }
-
+  unmount_device(mount_path);
   free(device_uid);
   return 0;
 }
@@ -192,7 +192,7 @@ DeviceList new_device_list() {
     DeviceAttributes dev_attrs = get_sdcard_attributes(current_device);
     size_t device_uid_length = strlen(dev_attrs.id_name) +
                                strlen(dev_attrs.uuid) +
-                               strlen(dev_attrs.block_size_part_table_type) + 3;
+                               strlen(dev_attrs.block_size) + 3;
 
     device_uid = (char *)malloc(device_uid_length);
     get_device_uid(dev_attrs, device_uid, device_uid_length);
