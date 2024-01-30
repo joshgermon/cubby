@@ -1,5 +1,5 @@
-#include "../include/cubby.h"
 #include "../include/cli.h"
+#include "../include/cubby.h"
 #include "../include/monitor.h"
 #include <getopt.h>
 #include <stdio.h>
@@ -25,8 +25,6 @@ void usage() {
          "\n");
 }
 
-int print_device_list() { return 0; }
-
 int run_command(cubby_opts_t *opts) {
   // List devices is the default command
   if (opts->command == NULL || strcmp(opts->command, "help") == 0) {
@@ -34,10 +32,13 @@ int run_command(cubby_opts_t *opts) {
   } else if (strcmp(opts->command, "list") == 0) {
     print_device_list();
   } else if (strcmp(opts->command, "start") == 0) {
+    char *trusted_device = ask_user_for_trusted_device();
+    opts->usb_device_id = trusted_device;
     printf("Starting Cubby, now listening for device events..\n");
     setup_udev_monitoring(opts);
   } else {
-    fprintf(stderr, "Command '%s' is not a valid command, run 'cubby help' to see valid usage.\n", opts->command);
+    fprintf(stderr, "Command is not a valid command, run 'cubby help' to see "
+                    "valid usage.\n");
     exit(EXIT_FAILURE);
   }
   exit(EXIT_SUCCESS);
@@ -45,6 +46,7 @@ int run_command(cubby_opts_t *opts) {
 
 int main(int argc, char *argv[]) {
   cubby_opts_t opts = {NULL, 0, 0, NULL};
+
   parse_args(argc, argv, &opts);
 
   run_command(&opts);

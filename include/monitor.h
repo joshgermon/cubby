@@ -10,10 +10,18 @@ typedef struct {
   char *size;
   char *block_size_part_table_type;
   char *syspath;
-} device_attrs;
+} DeviceAttributes;
+
+typedef struct {
+  char **devices;
+  int length;
+} DeviceList;
 
 int setup_udev_monitoring(cubby_opts_t *opts);
-int get_list_of_available_devices();
-device_attrs get_sdcard_attributes(sd_device *dev);
+DeviceAttributes get_sdcard_attributes(sd_device *dev);
+DeviceList new_device_list();
+void cleanup_device_list(DeviceList device_list);
+int print_device_list();
+char* ask_user_for_trusted_device();
 
 #endif /* MONITOR_H */

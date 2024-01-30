@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-device_attrs get_sdcard_attributes(sd_device *dev) {
-  device_attrs dev_attrs = {"noname", "noserial", "nosize",
+DeviceAttributes get_sdcard_attributes(sd_device *dev) {
+  DeviceAttributes dev_attrs = {"noname", "noserial", "nosize",
                             "noblocksizenorparttabletype", "no-path"};
   int res;
   const char *syspath;
@@ -69,7 +69,7 @@ static int uid_is_in_list(char *device_uid) {
     // But for now, just check if each line exists in
     // our device uid listImages
 
-    // REMOVE NEW LINE
+    // Remove new line
     line[strcspn(line, "\n")] = 0;
     if (strcmp(device_uid, line) == 0)
       return 0;
@@ -79,7 +79,7 @@ static int uid_is_in_list(char *device_uid) {
   return -1;
 }
 
-void get_device_uid(device_attrs dev_attrs, char *device_uid) {
+static void print_event_log(DeviceAttributes dev_attrs) {
   // Print all details of device
   printf("\n-- Device Connected --\n");
   printf("\tName: %s\n", dev_attrs.id_name);
@@ -87,10 +87,12 @@ void get_device_uid(device_attrs dev_attrs, char *device_uid) {
   printf("\tSize: %s\n", dev_attrs.size);
   printf("\tBlock Size: %s\n", dev_attrs.block_size_part_table_type);
   printf("\tSyspath: %s\n\n", dev_attrs.syspath);
+}
 
+void get_device_uid(DeviceAttributes dev_attrs, char *device_uid, size_t device_uid_len) {
   // We don't want to add size, as size can change depending on the SD card
   // connected to the actual card reader
-  sprintf(device_uid, "%s:%s:%s", dev_attrs.id_name, dev_attrs.uuid,
+  snprintf(device_uid, device_uid_len, "%s:%s:%s", dev_attrs.id_name, dev_attrs.uuid,
           dev_attrs.block_size_part_table_type);
 }
 
@@ -108,13 +110,14 @@ int device_event_handler(sd_device_monitor *monitor, sd_device *device,
   sd_device_get_action(device, &action);
 
   char *device_uid;
-  device_attrs dev_attrs = get_sdcard_attributes(device);
+  DeviceAttributes dev_attrs = get_sdcard_attributes(device);
   size_t device_uid_length = strlen(dev_attrs.id_name) +
                              strlen(dev_attrs.uuid) +
-                             strlen(dev_attrs.block_size_part_table_type) + 4;
+                             strlen(dev_attrs.block_size_part_table_type) + 3;
   device_uid = (char *)malloc(device_uid_length);
 
-  get_device_uid(dev_attrs, device_uid);
+  print_event_log(dev_attrs);
+  get_device_uid(dev_attrs, device_uid, device_uid_length);
 
   int device_size = atoi(dev_attrs.size);
   if (device_size == 0) {
@@ -122,7 +125,8 @@ int device_event_handler(sd_device_monitor *monitor, sd_device *device,
     return 0;
   }
 
-  if (uid_is_in_list(device_uid) == 0) {
+  // if (uid_is_in_list(device_uid) == 0) {
+  if (strcmp(device_uid, opts->usb_device_id) == 0) {
     printf("Device connected is a *trusted device*.\n");
 
     const char *dev_name;
@@ -164,4 +168,89 @@ int setup_udev_monitoring(cubby_opts_t *opts) {
   return 0;
 }
 
+DeviceList new_device_list() {
+  sd_device_enumerator *sd_dev_enum;
+  sd_device_enumerator_new(&sd_dev_enum);
 
+  // Create initial buffer
+  int dev_buffer_size = 16;
+  char **devices = malloc(sizeof(*devices) * dev_buffer_size);
+  if (devices == NULL) {
+    exit(EXIT_FAILURE);
+  }
+
+  sd_device *current_device;
+  sd_device_enumerator_add_match_subsystem(sd_dev_enum, "block", 1);
+
+  int i = 0;
+  for (current_device = sd_device_enumerator_get_device_first(sd_dev_enum);
+       current_device != NULL;
+       current_device = sd_device_enumerator_get_device_next(sd_dev_enum)) {
+
+    // Get current device unique ID
+    char *device_uid;
+    DeviceAttributes dev_attrs = get_sdcard_attributes(current_device);
+    size_t device_uid_length = strlen(dev_attrs.id_name) +
+                               strlen(dev_attrs.uuid) +
+                               strlen(dev_attrs.block_size_part_table_type) + 3;
+
+    device_uid = (char *)malloc(device_uid_length);
+    get_device_uid(dev_attrs, device_uid, device_uid_length);
+
+    // If we hit our max initial size, reallocate more memory
+    if (i >= dev_buffer_size) {
+      dev_buffer_size *= 2;
+      char **new_devices =
+          realloc(devices, sizeof(*new_devices) * dev_buffer_size);
+      if (new_devices == NULL) {
+        free(devices);
+        exit(EXIT_FAILURE);
+      }
+      devices = new_devices;
+    }
+    devices[i++] = device_uid;
+  }
+
+  DeviceList device_list = { .devices = devices, .length = i };
+
+  sd_device_unref(current_device);
+  sd_device_enumerator_unref(sd_dev_enum);
+
+  return device_list;
+}
+
+void cleanup_device_list(DeviceList device_list) {
+  for(int i = 0; i < device_list.length; i++) {
+    free(device_list.devices[i]);
+  }
+  free(device_list.devices);
+}
+
+int print_device_list() {
+  DeviceList device_list = new_device_list();
+
+  printf("--- Available Devices ---\n");
+  for(int i = 0; i < device_list.length; i++) {
+    printf("  [%d]\t %s\n", i, device_list.devices[i]);
+  }
+  printf("\n");
+
+  return 0;
+}
+
+char *ask_user_for_trusted_device() {
+  int selection;
+  DeviceList device_list = new_device_list();
+  print_device_list();
+
+  printf("Choose device to listen for: ");
+  scanf("%d", &selection);
+
+  printf("Your chosen device: %s\n", device_list.devices[selection]);
+
+  static char selected_device[64];
+  strncpy(selected_device, device_list.devices[selection], 64);
+
+  cleanup_device_list(device_list);
+  return selected_device;
+}
