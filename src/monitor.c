@@ -235,6 +235,7 @@ int print_device_list() {
   }
   printf("\n");
 
+  cleanup_device_list(device_list);
   return 0;
 }
 
@@ -246,10 +247,10 @@ char *ask_user_for_trusted_device() {
   printf("Choose device to listen for: ");
   scanf("%d", &selection);
 
-  printf("Your chosen device: %s\n", device_list.devices[selection]);
-
   static char selected_device[64];
   strncpy(selected_device, device_list.devices[selection], 64);
+
+  printf("Your chosen device: %s\n", selected_device);
 
   cleanup_device_list(device_list);
   return selected_device;

@@ -71,7 +71,7 @@ void parse_command_opts(int argc, char **argv, cubby_opts_t *opts,
          -1) {
     switch (opt) {
     case 'i':
-      opts->usb_device_id = atoi(optarg);
+      opts->usb_device_id = optarg;
       break;
     case 'b':
       opts->backup_path = optarg;

@@ -10,7 +10,7 @@
 typedef struct {
   char *command;
   int verbose;
-  int usb_device_id;
+  char* usb_device_id;
   char *backup_path;
 } cubby_opts_t;
 
