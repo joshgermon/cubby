@@ -18,7 +18,8 @@ void usage() {
          "\n"
          "COMMANDS\n" NO_BOLD_TEXT
          "  list:   lists the available devices and their IDs to listen for\n"
-         "  start:  starts cubby process to listen for device to backup \n"
+         "  start:  starts cubby process to listen for device to backup\n"
+         "  help:   prints this help menu and usage guide\n"
          "\n"
          "GLOBAL FLAGS\n"
          "  --verbose, -v      Enable verbose mode\n"
@@ -44,11 +45,20 @@ int run_command(cubby_opts_t *opts) {
   exit(EXIT_SUCCESS);
 }
 
+void ensure_perms() {
+  // Check for root user
+  // TODO: Update to more fine-grained permissions around mounting devices
+  if (getuid() != 0) {
+    printf("This program is required to run as root to mount directories. Please try again as root.\n");
+    exit(EXIT_FAILURE);
+  }
+}
+
 int main(int argc, char *argv[]) {
   cubby_opts_t opts = {NULL, 0, 0, NULL};
 
+  // ensure_perms();
   parse_args(argc, argv, &opts);
-
   run_command(&opts);
 
   return EXIT_SUCCESS;
