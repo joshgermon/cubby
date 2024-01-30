@@ -11,9 +11,10 @@ The ultimate goal of this application is to automatically backup files from an S
 - [x] Accepts flags / options
 - [x] Backs up trusted device to provided backup path with Rsync
 - [x] Provide way to list devices
-- [ ] Provide way to add trusted device from listed devices
-- [ ] Make a new directory with timestamp to backup too i.e ./backup/2023-01-01_1
-- [ ] Improved validation of flags and commands i.e X flag only valid for Y command
+- [x] Provide way to interactively pick trusted device from listed devices
+- [x] Make a new directory with timestamp to backup too i.e ./backup/2023-01-01_1
+- [x] Improved validation of flags and commands i.e X flag only valid for Y command
+- [x] Implement list devices command
 - [ ] Investigate behaviour when multiple partitions are added in an event (possible duplicate runs)
 - [ ] Report on new events / status / progress to some network
 - [ ] Backup specific folder on device if it exists (DCIM/)
