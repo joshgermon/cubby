@@ -15,12 +15,15 @@ The ultimate goal of this application is to automatically backup files from an S
 - [x] Make a new directory with timestamp to backup too i.e ./backup/2023-01-01_1
 - [x] Improved validation of flags and commands i.e X flag only valid for Y command
 - [x] Implement list devices command
-- [ ] Investigate behaviour when multiple partitions are added in an event (possible duplicate runs)
+- [x] Early exit on (non-root user) missing permissions to mount
+- [ ] Review UID for devices and if they are too specific (specific to SD size?)
+- [ ] Fix broken CLI options / per command parsing
 - [ ] Report on new events / status / progress to some network
 - [ ] Backup specific folder on device if it exists (DCIM/)
+- [ ] Fine grain permission check on missing permissions to mount
 - [ ] Config file / config pass along includes to rsync i.e. *.ARW
 - [ ] Run as a service investigation
-- [ ] Permission requirements and error handling when perms aren't there
+- [ ] Investigate behaviour when multiple partitions are added in an event (possible duplicate runs)
 - [ ] General logging
 - [ ] General error handling
 - [ ] Prettify the CLI interactions
