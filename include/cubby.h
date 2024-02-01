@@ -8,10 +8,10 @@
 #define NO_BOLD_TEXT "\e[m"
 
 typedef struct {
-  char *command;
-  int verbose;
-  char* usb_device_id;
-  char *backup_path;
+    char *command;
+    int verbose;
+    char *usb_device_id;
+    char *backup_path;
 } cubby_opts_t;
 
 #endif
