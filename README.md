@@ -1,11 +1,28 @@
 # Cubby (C USB Backup Buddy)
 
 ## Overview
-A small CLI utility that listens for a specific USB event (mounting/insert) and attempts to backup the drive to a specified location.
+A command line tool / Linux daemon written in C with minimal dependencies that listens for a specific USB event (mounting/insert) and attempts to backup the drive to a specified location (using rsync).
 
-The ultimate goal of this application is to automatically backup files from an SD Card once inserted into a USB SD Card Reader.
+The ultimate goal of this application was born out of a wish to automatically backup files from an SD Card once inserted into a USB SD Card Reader without user intervention.
 
-## Todo List
+## Platform
+
+Cubby is written for Linux platforms utilising the systemd API (lib-systemd) to listen for device events with udev. As device event monitoring is very much OS specific, this will not work for non-Linux platforms or Linux installations without systemd.
+
+## Usage
+
+Example CLI usage
+
+```
+cubby <command> [--flags]
+cubby list
+cubby start [-i USB Device ID] [-b Backup Path]
+```
+
+## Planning
+
+### Todo List
+
 - [x] Successfully listens for device events
 - [x] Mounts partition of device to filesystem
 - [x] Accepts flags / options
@@ -16,19 +33,22 @@ The ultimate goal of this application is to automatically backup files from an S
 - [x] Improved validation of flags and commands i.e X flag only valid for Y command
 - [x] Implement list devices command
 - [x] Early exit on (non-root user) missing permissions to mount
+- [x] Fix broken CLI options parsing
+- [x] Improve CLI options for per command parsing
+- [x] Improve/simplify error handling i.e die()
+- [ ] Config file / config pass along includes to rsync i.e. *.ARW
 - [ ] Review UID for devices and if they are too specific (specific to SD size?)
-- [ ] Fix broken CLI options / per command parsing
 - [ ] Report on new events / status / progress to some network
 - [ ] Backup specific folder on device if it exists (DCIM/)
 - [ ] Fine grain permission check on missing permissions to mount
-- [ ] Config file / config pass along includes to rsync i.e. *.ARW
 - [ ] Run as a service investigation
 - [ ] Investigate behaviour when multiple partitions are added in an event (possible duplicate runs)
 - [ ] General logging
-- [ ] General error handling
 - [ ] Prettify the CLI interactions
 
-## Ideas
+
+### Initial Sketch-out of Ideas
+
 - CLI interface to interact with
 - CLI interface to start a server
 - Specify the drive to listen for --usb-device / -d
@@ -53,7 +73,7 @@ cubby ls
 [2] USB ABC
 ```
 
-## libusb hotplug to udev rules (changing initial approach)
+### Note on libusb hotplug to udev rules (changing initial approach)
 
 Initially had approached testing by inserting and removing a USB Storage Drive and using the libusb library, use the hotplug functionality to listen for the specified drive's connection and disconnection.
 
