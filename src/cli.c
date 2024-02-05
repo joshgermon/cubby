@@ -60,8 +60,8 @@ static int ensure_valid_command(char *command) {
 
 
 void parse_args(int argc, char **argv, cubby_opts_t *opts) {
-  if (optind >= argc) die("Expected command after options.\n");
-  opts->command = argv[optind];
+  opts->command = argv[1];
+  if (opts->command == NULL) return;
 
   if (!ensure_valid_command(opts->command))
     die("Command is not a valid command, run 'cubby help' to see valid usage.");
