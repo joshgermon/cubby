@@ -73,15 +73,24 @@ static void create_timestamp_backup_dir(const char *backup_path, char *out_path,
 
 const char *mount_device_to_fs(const char *source)
 {
-    // TODO: Make this random uid
-    static const char *mount_path = "/mnt";
+    /* Generate unique id for mount path */
+    char uid[21];
+    generate_unique_id_string(uid, sizeof(uid));
 
-    // TODO: Replace with source, found with partitions
+    static char mount_path[32];
+    snprintf(mount_path, 32, "/mnt/%s", uid);
+
+    printf("Attempting to mount to path: %s\n", mount_path);
+    if (mkdir(mount_path, 0755) == -1) {
+        die("Failed to create mount directory");
+    }
+
     // TODO: Mount different file types instead of hardcode exfat
     if (mount(source, mount_path, "exfat", 0, "") == 0) {
         printf("Device successfully mounted at %s\n", mount_path);
     } else {
         perror("Mount failed");
+        return NULL;
     }
 
     return mount_path;
@@ -91,6 +100,11 @@ void unmount_device(const char *mount_path)
 {
     if (umount(mount_path) == 0) {
         printf("Unmounted device from '%s' successfully.\n", mount_path);
+        if (rmdir(mount_path) == 0) {
+            printf("Removed temp mount dir '%s' successfully.\n", mount_path);
+        } else {
+            perror("Attempt to cleanup mount directory failed");
+        }
     } else {
         perror("Attempt to unmount device failed");
     }
