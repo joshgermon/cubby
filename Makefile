@@ -1,6 +1,6 @@
 CC := gcc
 CFLAGS := -Iinclude -Wall
-LDFLAGS := -lsystemd -lblkid
+LDFLAGS := -lsystemd -lblkid -lcurl
 SRC_DIR := src
 BUILD_DIR := build
 SOURCES := $(wildcard $(SRC_DIR)/*.c)
