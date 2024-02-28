@@ -64,8 +64,8 @@ static void print_event_log(DeviceAttributes dev_attrs)
 
 void get_device_uid(DeviceAttributes dev_attrs, char *device_uid, size_t device_uid_len)
 {
-    /** We don't want to add size, as size can change depending on the SD card
-        connected to the actual card reader */
+    /** We don't want to add size as a unique identifier, as size can change
+        depending on the SD card connected to the actual card reader */
     snprintf(device_uid, device_uid_len, "%s:%s:%s", dev_attrs.id_name,
     dev_attrs.uuid, dev_attrs.block_size);
 }
@@ -88,7 +88,7 @@ int device_event_handler(sd_device_monitor *monitor, sd_device *device, void *us
 
     /** Return if device is not a trusted device */
     if (strcmp(device_uid, opts->usb_device_id) != 0) {
-        printf("Ignoring event, device is not a *trusted device*.\n");
+        printf("Ignoring event, device (%s) is not a *trusted device*.\n", opts->usb_device_id);
         return 0;
     }
 
@@ -105,6 +105,10 @@ int device_event_handler(sd_device_monitor *monitor, sd_device *device, void *us
 
     /** Mount partition to file system and backup */
     const char *mount_path = mount_device_to_fs(dev_name);
+    if (mount_path == NULL) {
+      return -1;
+    }
+
     backup_dir(opts, mount_path);
 
     unmount_device(mount_path);

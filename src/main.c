@@ -52,7 +52,7 @@ void ensure_perms()
     /** Check for root user */
     /** TODO: Update to more fine-grained permissions around mounting devices */
     if (getuid() != 0)
-        die("This program is required to run as root to mount directories. "
+        die("This program is required to run as root to mount and create directories. "
             "Please try again as root.\n");
 }
 
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 {
     cubby_opts_t opts = { NULL, 0, 0, NULL };
 
-    // ensure_perms();
+    ensure_perms();
     parse_args(argc, argv, &opts);
     run_command(&opts);
 
