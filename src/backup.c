@@ -9,26 +9,26 @@
 #include <time.h>
 #include <unistd.h>
 
-#define MAX_PATH_LEN 256 // TODO: Update to dynamic strbuf
+#define ISO_TIMESTAMP_LENGTH 12
 
 static void create_timestamp_backup_dir(const char *backup_path, char *out_path, size_t out_path_len);
 
 int backup_dir(cubby_opts_t *opts, const char *source_dir)
 {
-    char full_backup_path[MAX_PATH_LEN];
-    create_timestamp_backup_dir(opts->backup_path, full_backup_path, MAX_PATH_LEN);
-    printf("Backing up with rsync from '%s' to '%s'\n", source_dir, full_backup_path);
+    size_t backup_path_len = strlen(opts->backup_path) + ISO_TIMESTAMP_LENGTH + 2;
+    char backup_path[backup_path_len];
+    create_timestamp_backup_dir(opts->backup_path, backup_path, backup_path_len);
 
+    printf("Backing up with rsync from '%s' to '%s'\n", source_dir, backup_path);
 
     /** Construct base rsync command */
     const char *rsync_cmd = "rsync -r --info=progress2 --info=name0";
     size_t rsync_cmd_length =
-    (strlen(rsync_cmd) + strlen(source_dir) + strlen(full_backup_path) + 3);
+    (strlen(rsync_cmd) + strlen(source_dir) + strlen(backup_path) + 3);
 
     /** Add directories to command */
     char *rsync_backup_cmd = xmalloc(rsync_cmd_length);
-    snprintf(rsync_backup_cmd, rsync_cmd_length, "%s %s %s", rsync_cmd,
-    source_dir, full_backup_path);
+    snprintf(rsync_backup_cmd, rsync_cmd_length, "%s %s %s", rsync_cmd, source_dir, backup_path);
 
     /** Run rsync command */
     system(rsync_backup_cmd);
@@ -45,7 +45,7 @@ static void create_timestamp_backup_dir(const char *backup_path, char *out_path,
     struct tm *tm_info = localtime(&t);
 
     /** Get YYYY-MM-DD timestamp for directory name */
-    char date_str[16];
+    char date_str[ISO_TIMESTAMP_LENGTH];
     strftime(date_str, sizeof(date_str), "%Y-%m-%d", tm_info);
 
     /** Create the full backup path */
@@ -56,13 +56,15 @@ static void create_timestamp_backup_dir(const char *backup_path, char *out_path,
     struct stat st = { 0 };
     int counter    = 0;
     while (stat(out_path, &st) != -1) {
+        if (counter >= 10)
+            die("Retried creating directory too many times");
         printf("Directory exists, trying with counter appended...\n");
         snprintf(out_path, out_path_len, "%s/%s_%d", backup_path, date_str, counter);
         counter++;
     }
-    if (mkdir(out_path, 0755) == -1) {
+
+    if (mkdir(out_path, 0755) == -1)
         die("Failed to create directory");
-    }
 
     printf("Directory created with timestamp at '%s'\n", out_path);
 }
@@ -70,11 +72,11 @@ static void create_timestamp_backup_dir(const char *backup_path, char *out_path,
 const char *mount_device_to_fs(const char *source)
 {
     /* Generate unique id for mount path */
-    char uid[21];
+    char uid[UID_LENGTH];
     generate_unique_id_string(uid, sizeof(uid));
 
-    static char mount_path[32];
-    snprintf(mount_path, 32, "/mnt/%s", uid);
+    static char mount_path[sizeof(uid) + 5];
+    snprintf(mount_path, sizeof(mount_path), "/mnt/%s", uid);
 
     printf("Attempting to mount to path: %s\n", mount_path);
     if (mkdir(mount_path, 0755) == -1) {

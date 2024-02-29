@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+#define UID_LENGTH 21
+
 void generate_unique_id_string(char *buffer, size_t buffer_size);
 
 void die (char *err);
