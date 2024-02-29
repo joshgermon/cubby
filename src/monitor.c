@@ -1,6 +1,7 @@
 #include "../include/monitor.h"
 #include "../include/backup.h"
 #include "../include/cubby.h"
+#include "../include/notifier.h"
 #include "../include/utils.h"
 #include "systemd/sd-device.h"
 #include <stdio.h>
@@ -87,8 +88,8 @@ int device_event_handler(sd_device_monitor *monitor, sd_device *device, void *us
     get_device_uid(dev_attrs, device_uid, device_uid_length);
 
     /** Return if device is not a trusted device */
-    if (strcmp(device_uid, opts->usb_device_id) != 0) {
-        printf("Ignoring event, device (%s) is not a *trusted device*.\n", opts->usb_device_id);
+    if (strcmp(device_uid, opts->device_uid) != 0) {
+        printf("Ignoring event, device (%s) is not a *trusted device*.\n", opts->device_uid);
         return 0;
     }
 
@@ -106,12 +107,16 @@ int device_event_handler(sd_device_monitor *monitor, sd_device *device, void *us
     /** Mount partition to file system and backup */
     const char *mount_path = mount_device_to_fs(dev_name);
     if (mount_path == NULL) {
-      return -1;
+        return -1;
     }
 
+    notify("Backup for SD Card has started", opts->slack_webhook);
     backup_dir(opts, mount_path);
 
     unmount_device(mount_path);
+    notify("Backup for SD Card has completed successfully. You can now remove "
+           "the SD card safely.", opts->slack_webhook);
+
     free(device_uid);
     return 0;
 }
@@ -137,6 +142,7 @@ int setup_udev_monitoring(cubby_opts_t *opts)
     if (r < 0)
         die("Could not start event loop");
 
+    printf("Starting Cubby, now listening for device events..\n");
     return 0;
 }
 

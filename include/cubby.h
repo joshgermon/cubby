@@ -10,8 +10,11 @@
 typedef struct {
     char *command;
     int verbose;
-    char *usb_device_id;
     char *backup_path;
+    char *device_uid;
+    char *slack_webhook;
+    char *include_only;
+    int preserve_dirs;
 } cubby_opts_t;
 
 #endif

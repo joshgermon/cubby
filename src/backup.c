@@ -9,20 +9,16 @@
 #include <time.h>
 #include <unistd.h>
 
-#define MAX_PATH_LEN 256
+#define MAX_PATH_LEN 256 // TODO: Update to dynamic strbuf
 
 static void create_timestamp_backup_dir(const char *backup_path, char *out_path, size_t out_path_len);
 
 int backup_dir(cubby_opts_t *opts, const char *source_dir)
 {
-    /** Check if opts and opts->backup_path are not null */
-    if (!opts || !opts->backup_path) {
-        fprintf(stderr, "No backup path found.\n");
-        return -1;
-    }
     char full_backup_path[MAX_PATH_LEN];
     create_timestamp_backup_dir(opts->backup_path, full_backup_path, MAX_PATH_LEN);
     printf("Backing up with rsync from '%s' to '%s'\n", source_dir, full_backup_path);
+
 
     /** Construct base rsync command */
     const char *rsync_cmd = "rsync -r --info=progress2 --info=name0";

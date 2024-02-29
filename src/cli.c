@@ -11,6 +11,10 @@ static struct option default_opts[] = {
 static struct option start_opts[] = {
     {"verbose", no_argument, 0, 'v'},
     {"backup-path", required_argument, 0, 'b'},
+    {"slack-webhook", required_argument, 0, 'w'},
+    {"device-uid", required_argument, 0, 'u'},
+    {"include-only", required_argument, 0, 'i'},
+    {"preserve-dirs", no_argument, 0, 'p'},
     {0, 0, 0, 0}
 };
 
@@ -33,13 +37,25 @@ static void parse_start_opts(int argc, char **argv, cubby_opts_t *opts) {
   int opt;
   int opt_index = 0;
 
-  while ((opt = getopt_long(argc, argv, "vb:", start_opts, &opt_index)) != -1) {
+  while ((opt = getopt_long(argc, argv, "vb:w:u:i:p", start_opts, &opt_index)) != -1) {
     switch (opt) {
     case 'v':
       opts->verbose = 1;
       break;
     case 'b':
       opts->backup_path = optarg;
+      break;
+    case 'w':
+      opts->slack_webhook = optarg;
+      break;
+    case 'u':
+      opts->device_uid = optarg;
+      break;
+    case 'i':
+      opts->include_only = optarg;
+      break;
+    case 'p':
+      opts->preserve_dirs = 1;
       break;
     default:
       die("Invalid option provided for this command.\n");

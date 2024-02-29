@@ -36,9 +36,14 @@ int run_command(cubby_opts_t *opts)
     } else if (strcmp(opts->command, "list") == 0) {
         print_device_list();
     } else if (strcmp(opts->command, "start") == 0) {
-        char *trusted_device = ask_user_for_trusted_device();
-        opts->usb_device_id  = trusted_device;
-        printf("Starting Cubby, now listening for device events..\n");
+        /* Backup path is required */
+        if (!opts->backup_path)
+            die("No backup path provided.");
+
+        /* If no device id provided, prompt user for one */
+        if (opts->device_uid == NULL)
+            opts->device_uid = ask_user_for_trusted_device();
+
         setup_udev_monitoring(opts);
     } else {
         die("Command is not a valid command, run 'cubby help' to see "
@@ -52,13 +57,14 @@ void ensure_perms()
     /** Check for root user */
     /** TODO: Update to more fine-grained permissions around mounting devices */
     if (getuid() != 0)
-        die("This program is required to run as root to mount and create directories. "
+        die("This program is required to run as root to mount and create "
+            "directories. "
             "Please try again as root.\n");
 }
 
 int main(int argc, char *argv[])
 {
-    cubby_opts_t opts = { NULL, 0, 0, NULL };
+    cubby_opts_t opts = { NULL, 0, NULL, NULL, NULL, NULL, 0 };
 
     ensure_perms();
     parse_args(argc, argv, &opts);
