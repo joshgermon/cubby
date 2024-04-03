@@ -1,4 +1,4 @@
-# Cubby (C USB Backup Buddy)
+# Cubby
 
 ## Overview
 A command line tool / Linux daemon written in C with minimal dependencies that listens for a specific USB event (mounting/insert) and attempts to backup the drive to a specified location (using rsync).
