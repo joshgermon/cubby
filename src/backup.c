@@ -1,4 +1,5 @@
 #include "../include/cubby.h"
+#include "../include/cubcopy.h"
 #include "../include/utils.h"
 #include <dirent.h>
 #include <stdio.h>
@@ -13,29 +14,35 @@
 
 static void create_timestamp_backup_dir(const char *backup_path, char *out_path, size_t out_path_len);
 
-int backup_dir(cubby_opts_t *opts, const char *source_dir)
+void copy_callback(struct FileNodeArray *copy_queue, int copy_result) {
+  if(copy_result == 0) {
+    printf("Copied file (%d of %d) ... \n", copy_queue->current - 1, copy_queue->length);
+  } else {
+    printf("Failed to copy file (%d of %d), skipping...\n", copy_queue->current - 1, copy_queue->length);
+  }
+}
+
+int backup_dir(cubby_opts_t *opts, char *source_dir)
 {
     size_t backup_path_len = strlen(opts->backup_path) + ISO_TIMESTAMP_LENGTH + 2;
     char backup_path[backup_path_len];
     create_timestamp_backup_dir(opts->backup_path, backup_path, backup_path_len);
 
-    printf("Backing up with rsync from '%s' to '%s'\n", source_dir, backup_path);
+    printf("Backing up with cubcopy from '%s' to '%s'\n", source_dir, backup_path);
 
-    /** Construct base rsync command */
-    const char *rsync_cmd = "rsync -r --info=progress2 --info=name0";
-    size_t rsync_cmd_length =
-    (strlen(rsync_cmd) + strlen(source_dir) + strlen(backup_path) + 3);
+    struct FileNodeArray *copy_queue = init_file_node_array();
+    if (discover_and_create_copy_queue(copy_queue, source_dir, backup_path, NULL) == -1) {
+      free_file_node_array(copy_queue);
+      return 1;
+    }
 
-    /** Add directories to command */
-    char *rsync_backup_cmd = xmalloc(rsync_cmd_length);
-    snprintf(rsync_backup_cmd, rsync_cmd_length, "%s %s %s", rsync_cmd, source_dir, backup_path);
+    printf("Starting copy of %d files...\n", copy_queue->length);
 
-    /** Run rsync command */
-    system(rsync_backup_cmd);
+    copy_contents(copy_queue, copy_callback);
 
-    printf("Completed rsync backup without error.\n");
+    printf("Completed cubcopy backup without error.\n");
 
-    free(rsync_backup_cmd);
+    free_file_node_array(copy_queue);
     return 0;
 }
 
